@@ -1,9 +1,14 @@
-import { Box, Button, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
+import { Avatar, Box, Button, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { baseURL } from "../api/baseURL";
+import { baseURL } from "../../api/baseURL";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useNavigate } from "react-router-dom";
 
-function App() {
+const HomePage = () => {
+  const { user } = useAuth0();
+  const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [feedback_info, setFeedback_info] = useState({
     session: "",
     semester: "",
@@ -11,6 +16,25 @@ function App() {
     feedback: "",
   });
   const [studentDetails, setStudentDetails] = useState(null);
+
+  useEffect(() => {
+    const get_options = async () => {
+      try {
+        const accessToken = await getAccessTokenSilently();
+        // const objectId = "65c06e46aabe7c4f41385938";
+        const objectId = "65c0d495c8dfd1dd15a205bb";
+        const url = `${baseURL}/api/students?objectId=${objectId}`;
+        const config = { headers: { Authorization: `Bearer ${accessToken}` } };
+        const result = await axios.get(url, config);
+        const data = await result.data;
+        setStudentDetails(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    get_options();
+  }, []);
+
   const handleChange = (event) => {
     if (event.target.name === "session") {
       setFeedback_info({ ...feedback_info, session: event.target.value });
@@ -23,21 +47,9 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    const get_options = async () => {
-      try {
-        // const objectId = "65c06e46aabe7c4f41385938";
-        const objectId = "65c0d495c8dfd1dd15a205bb";
-        const url = `${baseURL}/api/students?objectId=${objectId}`;
-        const result = await axios.get(url);
-        const data = await result.data;
-        setStudentDetails(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    get_options();
-  }, []);
+  const handleAccountClick = () => {
+    navigate("/user-account");
+  };
 
   //update feedback
   const handleSubmit = async () => {
@@ -75,14 +87,15 @@ function App() {
           justifyContent: "space-between",
         }}>
         <Typography variant="h3">FeedbackX</Typography>
-        <Typography variant="h6">Account</Typography>
+        <Avatar src={user.picture} alt="Profile Image" onClick={handleAccountClick} />
       </Box>
       <Box
         sx={{
           display: "flex",
           width: "100%",
           justifyContent: "center",
-          margin: 2,
+          marginTop: 2,
+          marginBottom: 2,
         }}>
         <Box
           sx={{
@@ -206,6 +219,6 @@ function App() {
       </Box>
     </Box>
   );
-}
+};
 
-export default App;
+export default HomePage;
