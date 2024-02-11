@@ -21,9 +21,7 @@ const HomePage = () => {
     const get_options = async () => {
       try {
         const accessToken = await getAccessTokenSilently();
-        // const objectId = "65c06e46aabe7c4f41385938";
-        const objectId = "65c0d495c8dfd1dd15a205bb";
-        const url = `${baseURL}/api/students?objectId=${objectId}`;
+        const url = `${baseURL}/api/students?objectId=${accessToken}`;
         const config = { headers: { Authorization: `Bearer ${accessToken}` } };
         const result = await axios.get(url, config);
         const data = await result.data;
@@ -61,7 +59,10 @@ const HomePage = () => {
       feedback: feedback_info.feedback,
     };
     try {
-      await axios.put(`${baseURL}/api/students`, new_feedback_info);
+      const accessToken = await getAccessTokenSilently();
+      await axios.put(`${baseURL}/api/students`, new_feedback_info, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       setFeedback_info({
         session: "",
         semester: "",
