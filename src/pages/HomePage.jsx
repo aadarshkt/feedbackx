@@ -1,14 +1,49 @@
-import { Avatar, Box, Button, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { baseURL } from "../../api/baseURL";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { courseData } from "../utils/courseData";
 
 const HomePage = () => {
   const { user } = useAuth0();
+  console.log(user);
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+  const user_info = useSelector((state) => state.user_info?.first_name);
+  const [open, setOpen] = useState(true);
+
+  //   useEffect(() => {
+  //     if (
+  //       user_info.first_name &&
+  //       user_info.last_name &&
+  //       user_info.roll_no &&
+  //       user_info.email &&
+  //       user_info.session.length
+  //     ) {
+  //       setIsInfoAvailable(true);
+  //     } else {
+  //       console.log("hello");
+  //     }
+  //   }, [user_info]);
   const [feedback_info, setFeedback_info] = useState({
     session: "",
     semester: "",
@@ -73,6 +108,54 @@ const HomePage = () => {
       console.error(error);
     }
   };
+
+  //state for dailog box.
+  const [newUserInfo, setNewUserInfo] = useState({
+    first_name: user.given_name,
+    last_name: user.family_name,
+    roll_no: "",
+    email: user.email,
+    sessions: [
+      {
+        name: "",
+        semesters: [
+          {
+            name: "",
+            courses: [
+              {
+                name: "",
+                feedback: "",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    semesters: [],
+    courses: [],
+  });
+
+  const handleNewUserInfoSubmit = () => {
+    console.log(newUserInfo);
+    // setOpen(false);
+  };
+  const handleNewUserData = (event) => {
+    if (event.target.name === "choose_sessions") {
+      setNewUserInfo({ ...newUserInfo, sessions: event.target.value });
+    } else if (event.target.name === "choose_semesters") {
+      const [sessionValue, semesterValue] = event.target.value.split("-");
+      const oldArray = newUserInfo.sessions;
+      const findSession = oldArray((obj) => obj.name === sessionValue);
+      const index = oldArray.indexOf(findSession);
+      const newArray = oldArray;
+      newArray[index].semesters.values.push(semesterValue);
+      setNewUserInfo({ ...newUserInfo, semesters: event.target.value });
+    } else if (event.target.name === "choose_courses") {
+      setNewUserInfo({ ...newUserInfo, courses: event.target.value });
+    } else if (event.target.name === "roll_no") {
+      setNewUserInfo({ ...newUserInfo, roll_no: event.target.value });
+    }
+  };
   return (
     <Box
       sx={{
@@ -81,6 +164,155 @@ const HomePage = () => {
         justifyContent: "center",
         width: "100%",
       }}>
+      <Fragment>
+        <Dialog open={true}>
+          <DialogTitle>Fill Details</DialogTitle>
+          <DialogContent>
+            <DialogContentText>Please fill additional details for providing feedback.</DialogContentText>
+            <TextField
+              autoFocus
+              required
+              margin="dense"
+              name="first_name"
+              value={newUserInfo.first_name}
+              label="First Name"
+              fullWidth
+              variant="standard"
+            />
+            <TextField
+              autoFocus
+              required
+              margin="dense"
+              name="last_name"
+              value={newUserInfo.last_name}
+              label="Last Name"
+              fullWidth
+              variant="standard"
+            />
+            <TextField
+              autoFocus
+              required
+              margin="dense"
+              name="roll_no"
+              value={newUserInfo.roll_no}
+              onChange={handleNewUserData}
+              label="Roll No"
+              fullWidth
+              variant="standard"
+            />
+            <TextField
+              disabled={true}
+              autoFocus
+              required
+              margin="dense"
+              name="email"
+              value={newUserInfo.email}
+              label="Email Address"
+              type="email"
+              fullWidth
+              variant="standard"
+            />
+            <FormControl variant="standard" fullWidth>
+              <InputLabel>Choose Sessions</InputLabel>
+              <Select
+                name="choose_sessions"
+                label="Choose Sessions"
+                value={newUserInfo.sessions}
+                onChange={handleNewUserData}
+                multiple
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} />
+                    ))}
+                  </Box>
+                )}>
+                {courseData &&
+                  courseData?.map((session) => {
+                    return <MenuItem key={`${session.id}`} value={`${session.name}`}>{`${session.name}`}</MenuItem>;
+                  })}
+              </Select>
+            </FormControl>
+            <FormControl variant="standard" fullWidth>
+              <InputLabel>Choose Semesters</InputLabel>
+              <Select
+                name="choose_semesters"
+                label="Choose Semesters"
+                value={newUserInfo.semesters}
+                onChange={handleNewUserData}
+                multiple
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} />
+                    ))}
+                  </Box>
+                )}>
+                {courseData &&
+                  courseData
+                    .filter((session) => newUserInfo.sessions.includes(session.name))
+                    .map((session) =>
+                      session.semesters.map((semester) => {
+                        return (
+                          <MenuItem
+                            key={`${semester.id}`}
+                            value={`${semester.name}-${session.name}`}>{`${semester.name}`}</MenuItem>
+                        );
+                      })
+                    )}
+              </Select>
+            </FormControl>
+            <FormControl variant="standard" fullWidth>
+              <InputLabel>Choose Courses</InputLabel>
+              <Select
+                name="choose_courses"
+                label="Choose Courses"
+                value={newUserInfo.courses}
+                onChange={handleNewUserData}
+                multiple
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} />
+                    ))}
+                  </Box>
+                )}>
+                {courseData &&
+                  courseData
+                    .filter((session) => newUserInfo.sessions.includes(session.name))
+                    .map((session) =>
+                      session.semesters
+                        .filter((semester) => newUserInfo.semesters.includes(semester.name))
+                        .map((semester, index) => {
+                          return semester.courses.map((course) => {
+                            return <MenuItem key={`${index}`} value={`${course}`}>{`${course}`}</MenuItem>;
+                          });
+                        })
+                    )}
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+            }}>
+            <Button
+              disabled={
+                newUserInfo.first_name === "" ||
+                newUserInfo.last_name === "" ||
+                newUserInfo.roll_no === "" ||
+                newUserInfo.sessions.length === 0 ||
+                newUserInfo.semesters.length === 0 ||
+                newUserInfo.courses.length === 0
+              }
+              variant="outlined"
+              onClick={handleNewUserInfoSubmit}>
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Fragment>
       <Box
         sx={{
           width: "100%",
